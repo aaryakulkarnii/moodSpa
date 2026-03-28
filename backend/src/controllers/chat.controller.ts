@@ -50,7 +50,11 @@ function isCrisis(msg: string): boolean {
 // ─── POST /api/chat ───────────────────────────────────────────
 export async function handleChat(req: Request, res: Response): Promise<void> {
   try {
-    const { message, sessionId } = req.body as { message: string; sessionId: string };
+    const { message, sessionId, lang } = req.body as {
+      message: string;
+      sessionId: string;
+      lang?: string;
+    };
 
     if (!message?.trim() || !sessionId?.trim()) {
       res.status(400).json({ error: "message and sessionId are required" });
@@ -66,12 +70,22 @@ export async function handleChat(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Language instruction for non-English users
+    const langInstruction =
+      lang && lang !== "en-IN"
+        ? `\n\nIMPORTANT: The user is communicating in language "${lang}". Respond in the SAME language as the user's message.`
+        : "";
+
     // Optionally enrich with scraped news
     let userMessage = message;
     if (needsNews(message)) {
       const articles = await scrapeMentalHealthNews();
-      const raw = articles.map((a, i) => `${i + 1}. ${a.title}: ${a.snippet}`).join("\n");
-      userMessage = `User asked: "${message}"\n\nRecent mental health news:\n${raw}\n\nPlease summarize this warmly and helpfully.`;
+      const raw = articles
+        .map((a, i) => `${i + 1}. ${a.title}: ${a.snippet}`)
+        .join("\n");
+      userMessage = `User asked: "${message}"\n\nRecent mental health news:\n${raw}\n\nPlease summarize this warmly and helpfully.${langInstruction}`;
+    } else {
+      userMessage = message + langInstruction;
     }
 
     // Load last 10 messages for context
@@ -122,7 +136,11 @@ export async function handleChat(req: Request, res: Response): Promise<void> {
   }
 }
 
-async function saveMessages(sessionId: string, userMsg: string, assistantMsg: string) {
+async function saveMessages(
+  sessionId: string,
+  userMsg: string,
+  assistantMsg: string
+) {
   const convo = await prisma.conversation.upsert({
     where: { sessionId },
     create: { sessionId },
@@ -137,7 +155,10 @@ async function saveMessages(sessionId: string, userMsg: string, assistantMsg: st
 }
 
 // ─── GET /api/conversation/:sessionId ────────────────────────
-export async function getConversation(req: Request, res: Response): Promise<void> {
+export async function getConversation(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const { sessionId } = req.params;
     const convo = await prisma.conversation.findUnique({
@@ -145,7 +166,10 @@ export async function getConversation(req: Request, res: Response): Promise<void
       include: { messages: { orderBy: { createdAt: "asc" }, take: 50 } },
     });
     res.json({
-      messages: (convo?.messages || []).map((m) => ({ role: m.role, content: m.content })),
+      messages: (convo?.messages || []).map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
     });
   } catch {
     res.status(500).json({ error: "Failed to load conversation" });
@@ -153,7 +177,10 @@ export async function getConversation(req: Request, res: Response): Promise<void
 }
 
 // ─── DELETE /api/conversation/:sessionId ─────────────────────
-export async function clearConversation(req: Request, res: Response): Promise<void> {
+export async function clearConversation(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const { sessionId } = req.params;
     await prisma.conversation.deleteMany({ where: { sessionId } });

@@ -2,12 +2,13 @@ const BASE = (import.meta as unknown as { env: Record<string, string> }).env?.VI
 
 export async function sendMessage(
   message: string,
-  sessionId: string
+  sessionId: string,
+  lang: string = "en-IN"
 ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
   const res = await fetch(`${BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, sessionId }),
+    body: JSON.stringify({ message, sessionId, lang }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Network error" }));
@@ -17,17 +18,13 @@ export async function sendMessage(
   return res.body.getReader();
 }
 
-export async function loadHistory(
-  sessionId: string
-): Promise<{ role: "user" | "assistant"; content: string }[]> {
+export async function loadHistory(sessionId: string): Promise<{ role: "user" | "assistant"; content: string }[]> {
   try {
     const res = await fetch(`${BASE}/api/conversation/${sessionId}`);
     if (!res.ok) return [];
     const data = await res.json();
     return data.messages || [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 export async function clearHistory(sessionId: string): Promise<void> {
