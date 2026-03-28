@@ -1,5 +1,5 @@
-import { useState, useRef, KeyboardEvent, useEffect } from "react";
-import { Send, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { useState, useRef, KeyboardEvent } from "react";
+import { Send, Mic } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SUGGESTIONS = [
@@ -12,50 +12,12 @@ const SUGGESTIONS = [
 interface Props {
   onSend: (text: string) => void;
   disabled?: boolean;
-  ttsEnabled: boolean;
-  onToggleTts: () => void;
 }
 
-export function PromptInputBox({ onSend, disabled, ttsEnabled, onToggleTts }: Props) {
+export function PromptInputBox({ onSend, disabled }: Props) {
   const [value, setValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
-  const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || (window as unknown as { webkitSpeechRecognition: typeof window.SpeechRecognition }).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "en-IN"; // works for English, Hindi, Marathi too
-
-    recognition.onresult = (e) => {
-      const transcript = Array.from(e.results)
-        .map((r) => r[0].transcript)
-        .join("");
-      setValue(transcript);
-    };
-
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
-    recognitionRef.current = recognition;
-  }, []);
-
-  const toggleListening = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      recognitionRef.current.start();
-      setIsListening(true);
-      setShowSuggestions(false);
-    }
-  };
 
   const handleSend = () => {
     const t = value.trim();
@@ -105,33 +67,21 @@ export function PromptInputBox({ onSend, disabled, ttsEnabled, onToggleTts }: Pr
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleInput}
-          placeholder={isListening ? "Listening…" : "How are you feeling right now…"}
+          placeholder="How are you feeling right now…"
           disabled={disabled}
           rows={1}
           className="flex-1 bg-transparent text-white placeholder-white/35 text-sm px-3 py-2.5 resize-none outline-none font-body leading-relaxed min-h-[44px]"
           style={{ maxHeight: "120px" }}
         />
 
-        {/* TTS toggle */}
         <button
-          onClick={onToggleTts}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors mb-0.5 cursor-pointer ${ttsEnabled ? "text-white bg-white/20" : "text-white/35 hover:text-white/60"}`}
-          title={ttsEnabled ? "Mute voice" : "Enable voice output"}
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-white/35 hover:text-white/60 transition-colors mb-0.5 cursor-pointer"
+          title="Voice input — coming soon"
+          tabIndex={-1}
         >
-          {ttsEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          <Mic size={15} />
         </button>
 
-        {/* Voice input */}
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={toggleListening}
-          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all mb-0.5 cursor-pointer ${isListening ? "bg-red-400/40 text-red-200 animate-pulse" : "text-white/35 hover:text-white/60"}`}
-          title={isListening ? "Stop listening" : "Voice input"}
-        >
-          {isListening ? <MicOff size={15} /> : <Mic size={15} />}
-        </motion.button>
-
-        {/* Send */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleSend}
