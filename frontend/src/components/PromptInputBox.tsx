@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent } from "react";
-import { Send, Mic } from "lucide-react";
+import { Send, Mic, Volume2, VolumeX } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SUGGESTIONS = [
@@ -12,9 +12,11 @@ const SUGGESTIONS = [
 interface Props {
   onSend: (text: string) => void;
   disabled?: boolean;
+  ttsEnabled?: boolean;
+  onToggleTts?: () => void;
 }
 
-export function PromptInputBox({ onSend, disabled }: Props) {
+export function PromptInputBox({ onSend, disabled, ttsEnabled, onToggleTts }: Props) {
   const [value, setValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,6 +75,17 @@ export function PromptInputBox({ onSend, disabled }: Props) {
           className="flex-1 bg-transparent text-white placeholder-white/35 text-sm px-3 py-2.5 resize-none outline-none font-body leading-relaxed min-h-[44px]"
           style={{ maxHeight: "120px" }}
         />
+
+        {onToggleTts && (
+          <button
+            onClick={onToggleTts}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white/35 hover:text-white/60 transition-colors mb-0.5 cursor-pointer"
+            title={ttsEnabled ? "Disable voice" : "Enable voice"}
+            tabIndex={-1}
+          >
+            {ttsEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          </button>
+        )}
 
         <button
           className="w-9 h-9 rounded-xl flex items-center justify-center text-white/35 hover:text-white/60 transition-colors mb-0.5 cursor-pointer"
