@@ -46,23 +46,20 @@ function isCrisis(msg: string): boolean {
   return CRISIS_KEYWORDS.some((k) => msg.toLowerCase().includes(k));
 }
 
-// ─── POST /api/chat ───────────────────────────────────────────
 export async function handleChat(req: Request, res: Response): Promise<void> {
   try {
-    const { message, plainMessage, sessionId, lang } = req.body as {
+    const { message, sessionId, lang } = req.body as {
       message: string;
-      plainMessage: string;
       sessionId: string;
       lang?: string;
     };
 
-    if (!plainMessage?.trim() || !sessionId?.trim()) {
+    if (!message?.trim() || !sessionId?.trim()) {
       res.status(400).json({ error: "message and sessionId are required" });
       return;
     }
 
-    // Crisis override — use plainMessage to detect, save encrypted user msg
-    if (isCrisis(plainMessage)) {
+    if (isCrisis(message)) {
       await saveMessages(sessionId, message, CRISIS_RESPONSE);
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.write(CRISIS_RESPONSE);
@@ -75,19 +72,17 @@ export async function handleChat(req: Request, res: Response): Promise<void> {
         ? `\n\nIMPORTANT: The user is communicating in language "${lang}". Respond in the SAME language as the user's message.`
         : "";
 
-    // Use plainMessage for AI logic
-    let userMessage = plainMessage;
-    if (needsNews(plainMessage)) {
+    let userMessage = message;
+    if (needsNews(message)) {
       const articles = await scrapeMentalHealthNews();
       const raw = articles
         .map((a, i) => `${i + 1}. ${a.title}: ${a.snippet}`)
         .join("\n");
-      userMessage = `User asked: "${plainMessage}"\n\nRecent mental health news:\n${raw}\n\nPlease summarize this warmly and helpfully.${langInstruction}`;
+      userMessage = `User asked: "${message}"\n\nRecent mental health news:\n${raw}\n\nPlease summarize this warmly and helpfully.${langInstruction}`;
     } else {
-      userMessage = plainMessage + langInstruction;
+      userMessage = message + langInstruction;
     }
 
-    // Load last 10 messages for context
     const convo = await prisma.conversation.findUnique({
       where: { sessionId },
       include: { messages: { orderBy: { createdAt: "asc" }, take: 10 } },
@@ -123,9 +118,6 @@ export async function handleChat(req: Request, res: Response): Promise<void> {
     }
 
     res.end();
-
-    // Save encrypted user message + plaintext AI response
-    // (AI response will be overwritten with encrypted version by frontend)
     saveMessages(sessionId, message, fullResponse).catch(console.error);
   } catch (err) {
     console.error("Chat error:", err);
@@ -135,11 +127,7 @@ export async function handleChat(req: Request, res: Response): Promise<void> {
   }
 }
 
-async function saveMessages(
-  sessionId: string,
-  userMsg: string,
-  assistantMsg: string
-) {
+async function saveMessages(sessionId: string, userMsg: string, assistantMsg: string) {
   const convo = await prisma.conversation.upsert({
     where: { sessionId },
     create: { sessionId },
@@ -153,11 +141,7 @@ async function saveMessages(
   });
 }
 
-// ─── GET /api/conversation/:sessionId ────────────────────────
-export async function getConversation(
-  req: Request,
-  res: Response
-): Promise<void> {
+export async function getConversation(req: Request, res: Response): Promise<void> {
   try {
     const { sessionId } = req.params;
     const convo = await prisma.conversation.findUnique({
@@ -175,46 +159,12 @@ export async function getConversation(
   }
 }
 
-// ─── DELETE /api/conversation/:sessionId ─────────────────────
-export async function clearConversation(
-  req: Request,
-  res: Response
-): Promise<void> {
+export async function clearConversation(req: Request, res: Response): Promise<void> {
   try {
     const { sessionId } = req.params;
     await prisma.conversation.deleteMany({ where: { sessionId } });
     res.json({ success: true });
   } catch {
     res.status(500).json({ error: "Failed to clear conversation" });
-  }
-}
-
-// ─── PATCH /api/conversation/:sessionId/encrypt-last ─────────
-export async function encryptLastMessages(
-  req: Request,
-  res: Response
-): Promise<void> {
-  try {
-    const { sessionId } = req.params;
-    const { encryptedAiResponse } = req.body as { encryptedAiResponse: string };
-
-    const convo = await prisma.conversation.findUnique({
-      where: { sessionId },
-      include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
-    });
-
-    if (!convo) { res.status(404).json({ error: "Conversation not found" }); return; }
-
-    const lastMsg = convo.messages[0];
-    if (lastMsg?.role === "assistant") {
-      await prisma.message.update({
-        where: { id: lastMsg.id },
-        data: { content: encryptedAiResponse },
-      });
-    }
-
-    res.json({ success: true });
-  } catch {
-    res.status(500).json({ error: "Failed to encrypt messages" });
   }
 }
