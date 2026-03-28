@@ -1,10 +1,12 @@
 import { Router } from "express";
-import { body, param } from "express-validator";
+import { body, param, query } from "express-validator";
 import { handleChat, getConversation, clearConversation } from "../controllers/chat.controller";
+import { saveMood, getMoods } from "../controllers/mood.controller";
 import { validateRequest } from "../middleware/validate";
 
 const router = Router();
 
+// ─── Chat ─────────────────────────────────────────────────────
 router.post(
   "/chat",
   [
@@ -27,6 +29,27 @@ router.delete(
   [param("sessionId").trim().notEmpty()],
   validateRequest,
   clearConversation
+);
+
+// ─── Mood ─────────────────────────────────────────────────────
+router.post(
+  "/mood",
+  [
+    body("sessionId").trim().notEmpty(),
+    body("mood").trim().notEmpty(),
+  ],
+  validateRequest,
+  saveMood
+);
+
+router.get(
+  "/mood/:sessionId",
+  [
+    param("sessionId").trim().notEmpty(),
+    query("days").optional().isNumeric(),
+  ],
+  validateRequest,
+  getMoods
 );
 
 export default router;

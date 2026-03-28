@@ -1,14 +1,20 @@
 import { motion } from "framer-motion";
-import { Trash2, Moon, Sun } from "lucide-react";
+import { Trash2, Moon, Sun, BarChart2, Wind, Bell } from "lucide-react";
 
 interface Props {
   onClear: () => void;
   darkMode: boolean;
   onToggleDark: () => void;
   messageCount: number;
+  onOpenDashboard: () => void;
+  onOpenBreathing: () => void;
+  onOpenReminders: () => void;
 }
 
-export function Header({ onClear, darkMode, onToggleDark, messageCount }: Props) {
+export function Header({
+  onClear, darkMode, onToggleDark, messageCount,
+  onOpenDashboard, onOpenBreathing, onOpenReminders
+}: Props) {
   return (
     <motion.header
       initial={{ opacity: 0, y: -16 }}
@@ -23,15 +29,19 @@ export function Header({ onClear, darkMode, onToggleDark, messageCount }: Props)
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          onClick={onToggleDark}
-          className="w-8 h-8 rounded-xl glass flex items-center justify-center text-white/60 hover:text-white transition-all cursor-pointer"
-          title="Toggle theme"
-        >
+      <div className="flex items-center gap-1.5">
+        <button onClick={onOpenDashboard} className="w-8 h-8 rounded-xl glass flex items-center justify-center text-white/60 hover:text-white transition-all cursor-pointer" title="Mood dashboard">
+          <BarChart2 size={14} />
+        </button>
+        <button onClick={onOpenBreathing} className="w-8 h-8 rounded-xl glass flex items-center justify-center text-white/60 hover:text-white transition-all cursor-pointer" title="Breathing exercise">
+          <Wind size={14} />
+        </button>
+        <button onClick={onOpenReminders} className="w-8 h-8 rounded-xl glass flex items-center justify-center text-white/60 hover:text-white transition-all cursor-pointer" title="Reminders">
+          <Bell size={14} />
+        </button>
+        <button onClick={onToggleDark} className="w-8 h-8 rounded-xl glass flex items-center justify-center text-white/60 hover:text-white transition-all cursor-pointer" title="Toggle theme">
           {darkMode ? <Sun size={14} /> : <Moon size={14} />}
         </button>
-
         {messageCount > 0 && (
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}

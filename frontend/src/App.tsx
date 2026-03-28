@@ -5,15 +5,23 @@ import { Header } from "./components/Header";
 import { MessageFeed } from "./components/MessageFeed";
 import { PromptInputBox } from "./components/PromptInputBox";
 import { WelcomeScreen } from "./components/WelcomeScreen";
+import { MoodDashboard } from "./components/MoodDashboard";
+import { BreathingExercise } from "./components/BreathingExercise";
+import { ReminderSetup } from "./components/ReminderSetup";
 
 const BG_LIGHT = "radial-gradient(125% 125% at 50% 101%, rgba(245,87,2,1) 10.5%, rgba(245,120,2,1) 16%, rgba(245,140,2,1) 17.5%, rgba(245,170,100,1) 25%, rgba(238,174,202,1) 40%, rgba(202,179,214,1) 65%, rgba(148,201,233,1) 100%)";
 const BG_DARK = "radial-gradient(125% 125% at 50% 101%, rgba(60,10,40,1) 10%, rgba(40,10,60,1) 25%, rgba(18,12,35,1) 65%, rgba(8,8,20,1) 100%)";
 
+type Panel = "dashboard" | "breathing" | "reminders" | null;
+
 export default function App() {
-  const { messages, isLoading, send, clear, ready, ttsEnabled, toggleTts } = useChat();
+  const { messages, isLoading, send, clear, ready, ttsEnabled, toggleTts, sessionId } = useChat();
   const [dark, setDark] = useState(false);
+  const [panel, setPanel] = useState<Panel>(null);
 
   useEffect(() => { document.documentElement.classList.toggle("dark", dark); }, [dark]);
+
+  const togglePanel = (p: Panel) => setPanel((cur) => cur === p ? null : p);
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden relative"
@@ -22,8 +30,29 @@ export default function App() {
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }} />
 
       <div className="relative z-10 h-full flex flex-col w-full max-w-2xl mx-auto">
-        <Header onClear={clear} darkMode={dark} onToggleDark={() => setDark((d) => !d)} messageCount={messages.length} />
+        <Header
+          onClear={clear}
+          darkMode={dark}
+          onToggleDark={() => setDark((d) => !d)}
+          messageCount={messages.length}
+          onOpenDashboard={() => togglePanel("dashboard")}
+          onOpenBreathing={() => togglePanel("breathing")}
+          onOpenReminders={() => togglePanel("reminders")}
+        />
         <div className="h-px bg-white/10 mx-5 flex-shrink-0" />
+
+        {/* Panels */}
+        <AnimatePresence>
+          {panel === "dashboard" && (
+            <MoodDashboard sessionId={sessionId} onClose={() => setPanel(null)} />
+          )}
+          {panel === "breathing" && (
+            <BreathingExercise onClose={() => setPanel(null)} />
+          )}
+          {panel === "reminders" && (
+            <ReminderSetup onClose={() => setPanel(null)} />
+          )}
+        </AnimatePresence>
 
         <AnimatePresence mode="wait">
           {!ready ? (
@@ -35,14 +64,14 @@ export default function App() {
                 ))}
               </div>
             </motion.div>
-          ) : messages.length === 0 ? (
-            <WelcomeScreen key="welcome" onMood={send} />
+          ) : messages.length === 0 && !panel ? (
+            <WelcomeScreen key="welcome" onMood={(text, isMoodCheckIn) => send(text, isMoodCheckIn)} />
           ) : (
             <MessageFeed key="feed" messages={messages} isLoading={isLoading} />
           )}
         </AnimatePresence>
 
-        {ready && <PromptInputBox onSend={send} disabled={isLoading} ttsEnabled={ttsEnabled} onToggleTts={toggleTts} />}
+        {ready && <PromptInputBox onSend={(text) => send(text, false)} disabled={isLoading} ttsEnabled={ttsEnabled} onToggleTts={toggleTts} />}
       </div>
     </div>
   );

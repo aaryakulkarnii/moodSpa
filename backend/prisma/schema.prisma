@@ -1,6 +1,3 @@
-// MoodSpa — Prisma Schema
-// Database: Neon PostgreSQL (free serverless Postgres)
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -25,6 +22,15 @@ model Message {
   role           Role
   content        String
   createdAt      DateTime     @default(now())
+}
+
+model MoodEntry {
+  id        String   @id @default(cuid())
+  sessionId String
+  mood      String
+  score     Int
+  note      String?
+  createdAt DateTime @default(now())
 }
 
 enum Role {

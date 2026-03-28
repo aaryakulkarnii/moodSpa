@@ -18,7 +18,9 @@ export async function sendMessage(
   return res.body.getReader();
 }
 
-export async function loadHistory(sessionId: string): Promise<{ role: "user" | "assistant"; content: string }[]> {
+export async function loadHistory(
+  sessionId: string
+): Promise<{ role: "user" | "assistant"; content: string }[]> {
   try {
     const res = await fetch(`${BASE}/api/conversation/${sessionId}`);
     if (!res.ok) return [];
@@ -29,4 +31,28 @@ export async function loadHistory(sessionId: string): Promise<{ role: "user" | "
 
 export async function clearHistory(sessionId: string): Promise<void> {
   await fetch(`${BASE}/api/conversation/${sessionId}`, { method: "DELETE" });
+}
+
+export async function saveMoodEntry(
+  sessionId: string,
+  mood: string,
+  note?: string
+): Promise<void> {
+  await fetch(`${BASE}/api/mood`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, mood, note }),
+  });
+}
+
+export async function fetchMoodHistory(
+  sessionId: string,
+  days = 7
+): Promise<{ mood: string; score: number; createdAt: string }[]> {
+  try {
+    const res = await fetch(`${BASE}/api/mood/${sessionId}?days=${days}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.entries || [];
+  } catch { return []; }
 }

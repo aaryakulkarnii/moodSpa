@@ -1,10 +1,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message } from "../lib/types";
-import { sendMessage, loadHistory, clearHistory } from "../lib/api";
+import { sendMessage, loadHistory, clearHistory, saveMoodEntry } from "../lib/api";
 
 const SESSION_KEY = "moodspa_session_id";
-const LANG_KEY = "moodspa_lang";
 
 function getOrCreateSessionId(): string {
   let id = localStorage.getItem(SESSION_KEY);
@@ -12,19 +11,14 @@ function getOrCreateSessionId(): string {
   return id;
 }
 
-// Detect language from text
 function detectLang(text: string): string {
-  // Hindi unicode range
   if (/[\u0900-\u097F]/.test(text)) return "hi-IN";
-  // Marathi (same script as Hindi but different patterns)
-  if (/[\u0900-\u097F]/.test(text)) return "mr-IN";
-  return localStorage.getItem(LANG_KEY) || "en-IN";
+  return "en-IN";
 }
 
 function speak(text: string, lang: string) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  // Strip markdown for cleaner speech
   const clean = text.replace(/[*_`#>\-]/g, "").replace(/\n+/g, ". ");
   const utt = new SpeechSynthesisUtterance(clean);
   utt.lang = lang;
@@ -54,11 +48,19 @@ export function useChat() {
     });
   }, [sessionId]);
 
-  const send = useCallback(async (text: string) => {
+  const send = useCallback(async (text: string, isMoodCheckIn = false) => {
     if (!text.trim() || isLoading) return;
 
     const lang = detectLang(text);
     setDetectedLang(lang);
+
+    // Auto-save mood if it's a mood check-in from welcome screen
+    if (isMoodCheckIn) {
+      const moodMatch = text.match(/feeling (\w+)/i);
+      if (moodMatch) {
+        saveMoodEntry(sessionId, moodMatch[1]).catch(console.error);
+      }
+    }
 
     const userMsg: Message = { id: uuidv4(), role: "user", content: text.trim(), timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
@@ -79,7 +81,6 @@ export function useChat() {
         setMessages((prev) => prev.map((m) => m.id === aiId ? { ...m, content: full } : m));
       }
 
-      // Speak the response if TTS is on
       if (ttsRef.current && full) speak(full, lang);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
@@ -102,5 +103,5 @@ export function useChat() {
     });
   }, []);
 
-  return { messages, isLoading, send, clear, ready, ttsEnabled, toggleTts, detectedLang };
+  return { messages, isLoading, send, clear, ready, ttsEnabled, toggleTts, detectedLang, sessionId };
 }
