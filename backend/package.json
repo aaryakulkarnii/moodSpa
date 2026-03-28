@@ -6,11 +6,9 @@
     "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn src/server.ts",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio"
+    "db:push": "prisma db push"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
     "@prisma/client": "^5.17.0",
     "axios": "^1.7.2",
     "cheerio": "^1.0.0",
@@ -19,9 +17,7 @@
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
     "express-validator": "^7.1.0",
-    "groq-sdk": "^1.1.2"
-  },
-  "devDependencies": {
+    "groq-sdk": "^0.5.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.10",
