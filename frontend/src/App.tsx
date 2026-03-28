@@ -41,17 +41,10 @@ export default function App() {
         />
         <div className="h-px bg-white/10 mx-5 flex-shrink-0" />
 
-        {/* Panels */}
         <AnimatePresence>
-          {panel === "dashboard" && (
-            <MoodDashboard sessionId={sessionId} onClose={() => setPanel(null)} />
-          )}
-          {panel === "breathing" && (
-            <BreathingExercise onClose={() => setPanel(null)} />
-          )}
-          {panel === "reminders" && (
-            <ReminderSetup onClose={() => setPanel(null)} />
-          )}
+          {panel === "dashboard" && <MoodDashboard sessionId={sessionId} onClose={() => setPanel(null)} />}
+          {panel === "breathing" && <BreathingExercise onClose={() => setPanel(null)} />}
+          {panel === "reminders" && <ReminderSetup onClose={() => setPanel(null)} />}
         </AnimatePresence>
 
         <AnimatePresence mode="wait">

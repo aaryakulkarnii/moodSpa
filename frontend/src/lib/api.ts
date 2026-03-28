@@ -1,3 +1,5 @@
+import { encryptText, decryptText } from "./crypto";
+
 const BASE = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_URL || "";
 
 export async function sendMessage(
@@ -5,10 +7,12 @@ export async function sendMessage(
   sessionId: string,
   lang: string = "en-IN"
 ): Promise<ReadableStreamDefaultReader<Uint8Array>> {
+  const encryptedMessage = await encryptText(sessionId, message);
+
   const res = await fetch(`${BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, sessionId, lang }),
+    body: JSON.stringify({ message: encryptedMessage, plainMessage: message, sessionId, lang }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "Network error" }));
@@ -18,6 +22,17 @@ export async function sendMessage(
   return res.body.getReader();
 }
 
+export async function encryptLastMessages(
+  sessionId: string,
+  encryptedAiResponse: string
+): Promise<void> {
+  await fetch(`${BASE}/api/conversation/${sessionId}/encrypt-last`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ encryptedAiResponse }),
+  });
+}
+
 export async function loadHistory(
   sessionId: string
 ): Promise<{ role: "user" | "assistant"; content: string }[]> {
@@ -25,7 +40,13 @@ export async function loadHistory(
     const res = await fetch(`${BASE}/api/conversation/${sessionId}`);
     if (!res.ok) return [];
     const data = await res.json();
-    return data.messages || [];
+    const messages: { role: "user" | "assistant"; content: string }[] = data.messages || [];
+    return await Promise.all(
+      messages.map(async (m) => ({
+        ...m,
+        content: await decryptText(sessionId, m.content),
+      }))
+    );
   } catch { return []; }
 }
 

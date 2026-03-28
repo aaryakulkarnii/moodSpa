@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Message } from "../lib/types";
-import { sendMessage, loadHistory, clearHistory, saveMoodEntry } from "../lib/api";
+import { sendMessage, loadHistory, clearHistory, saveMoodEntry, encryptLastMessages } from "../lib/api";
+import { encryptText } from "../lib/crypto";
 
 const SESSION_KEY = "moodspa_session_id";
 
@@ -54,12 +55,9 @@ export function useChat() {
     const lang = detectLang(text);
     setDetectedLang(lang);
 
-    // Auto-save mood if it's a mood check-in from welcome screen
     if (isMoodCheckIn) {
       const moodMatch = text.match(/feeling (\w+)/i);
-      if (moodMatch) {
-        saveMoodEntry(sessionId, moodMatch[1]).catch(console.error);
-      }
+      if (moodMatch) saveMoodEntry(sessionId, moodMatch[1]).catch(console.error);
     }
 
     const userMsg: Message = { id: uuidv4(), role: "user", content: text.trim(), timestamp: new Date() };
@@ -82,6 +80,12 @@ export function useChat() {
       }
 
       if (ttsRef.current && full) speak(full, lang);
+
+      // Encrypt AI response and overwrite in DB
+      if (full) {
+        const encryptedAiResponse = await encryptText(sessionId, full);
+        encryptLastMessages(sessionId, encryptedAiResponse).catch(console.error);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong.";
       setMessages((prev) => prev.map((m) => m.id === aiId ? { ...m, content: `⚠️ ${msg}` } : m));

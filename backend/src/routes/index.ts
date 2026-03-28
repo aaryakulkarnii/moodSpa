@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { body, param, query } from "express-validator";
-import { handleChat, getConversation, clearConversation } from "../controllers/chat.controller";
+import { handleChat, getConversation, clearConversation, encryptLastMessages } from "../controllers/chat.controller";
 import { saveMood, getMoods } from "../controllers/mood.controller";
 import { validateRequest } from "../middleware/validate";
 
@@ -10,7 +10,7 @@ const router = Router();
 router.post(
   "/chat",
   [
-    body("message").trim().notEmpty().withMessage("Message is required").isLength({ max: 2000 }),
+    body("plainMessage").trim().notEmpty().withMessage("Message is required").isLength({ max: 2000 }),
     body("sessionId").trim().notEmpty().withMessage("sessionId is required"),
   ],
   validateRequest,
@@ -29,6 +29,16 @@ router.delete(
   [param("sessionId").trim().notEmpty()],
   validateRequest,
   clearConversation
+);
+
+router.patch(
+  "/conversation/:sessionId/encrypt-last",
+  [
+    param("sessionId").trim().notEmpty(),
+    body("encryptedAiResponse").trim().notEmpty(),
+  ],
+  validateRequest,
+  encryptLastMessages
 );
 
 // ─── Mood ─────────────────────────────────────────────────────
